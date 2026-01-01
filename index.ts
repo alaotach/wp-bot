@@ -8,6 +8,8 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
+import os from 'os';
+import path from 'path';
 const { exec } = await import('child_process')
 
 const client = new OpenAI({
@@ -39,6 +41,7 @@ function saveChatNames(chatNames: string[]) {
 const chatNames = loadChatNames();
 
 const chatHistory: Record<string, Array<{text: string | undefined, timestamp: number | Long | null | undefined, role: 'user' | 'assistant'}>> = {}
+const cwDir: Record<string, string> = {}
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth')
@@ -537,16 +540,71 @@ async function startBot() {
     }
     if (text.startsWith("/cmd") && msg.key.fromMe) {
         const cmd = text.replace("/cmd", "").trim()
-        exec(cmd, (error, stdout, stderr) => {
+        if (!cmd) {
+            await sock.sendMessage(jid, { delete: msg.key })
+            return
+        }
+        if (!cwDir[jid]) {
+            cwDir[jid] = process.cwd()
+        }
+        if (cmd.startsWith('cd ')) {
+            const newDir = cmd.substring(3).trim()
+            let targetDir = newDir
+            if (!newDir.match(/^[a-zA-Z]:[\\\/]/) && !newDir.startsWith('/')) {
+                targetDir = path.resolve(cwDir[jid], newDir)
+            }
+            if (fs.existsSync(targetDir) && fs.statSync(targetDir).isDirectory()) {
+                cwDir[jid] = targetDir
+                await sock.sendMessage(jid, { delete: msg.key })
+                await sock.sendMessage(jid, { 
+                    text: `cd to:\n${cwDir[jid]}` 
+                })
+            } else {
+                await sock.sendMessage(jid, { delete: msg.key })
+                await sock.sendMessage(jid, { 
+                    text: `dir not found: ${targetDir}` 
+                })
+            }
+            return
+        }
+        const cwd = cwDir[jid]
+        exec(cmd, { 
+            cwd: cwd,
+            maxBuffer: 1024 * 1024 * 10,
+            timeout: 60000
+        }, async (error, stdout, stderr) => {
+            const host = os.hostname()
+            const username = os.userInfo().username
+            let out = `┌─[${username}@${host}]─[${cwd}]\n`
+            out += `└─$ ${cmd}\n\n`
             if (error) {
-                console.error(`Error executing command: ${error.message}`);
-                return;
+                out += `${error.message}\n`
+                if (stderr) out += `\n${stderr}`
+            } else {
+                if (stdout) {
+                    out += stdout
+                }
+                if (stderr) {
+                    out += `\nstderr:\n${stderr}`
+                }
+                if (!stdout && !stderr) {
+                    out += 'done'
+                }
             }
-            if (stderr) {
-                console.error(`Command stderr: ${stderr}`);
-                return;
+            const maxLen = 65535
+            if (out.length > maxLen) {
+                const chunks = []
+                for (let i = 0; i < out.length; i += maxLen) {
+                    chunks.push(out.substring(i, i + maxLen))
+                }
+                for (let i = 0; i < chunks.length; i++) {
+                    await sock.sendMessage(jid, { 
+                        text: `${chunks[i]}` 
+                    })
+                }
+            } else {
+                await sock.sendMessage(jid, { text: out })
             }
-            sock.sendMessage(jid, { text: `Command Output:\n${stdout}` })
         });
         await sock.sendMessage(jid, { delete: msg.key })
         return
