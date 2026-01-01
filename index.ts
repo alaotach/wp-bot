@@ -461,6 +461,30 @@ async function startBot() {
         return
     }
 
+    if (text===('/clearsaves') && msg.key.fromMe) {
+        if (fs.existsSync('pinned.txt')) {
+            fs.unlinkSync('pinned.txt')
+        }
+        await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+
+    if (text.startsWith('/schedule') && msg.key.fromMe) {
+        let scheduleText = text.replace('/schedule', '').trim()
+        const firstSpace = scheduleText.indexOf(' ')
+        if (firstSpace === -1) return
+        const dateTimeStr = scheduleText.substring(0, firstSpace).trim() // expect format: YYYY-MM-DDTHH:MM:SS
+        const messageToSend = scheduleText.substring(firstSpace + 1).trim()
+        const scheduledTime = new Date(dateTimeStr)
+        if (isNaN(scheduledTime.getTime())) return
+        const delay = scheduledTime.getTime() - Date.now()
+        if (delay <= 0) return
+        await sock.sendMessage(jid, { delete: msg.key })
+        setTimeout(async () => {
+            await sock.sendMessage(jid, { text: messageToSend })
+        }, delay)
+        return
+    }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
