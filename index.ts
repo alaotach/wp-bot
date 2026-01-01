@@ -314,6 +314,42 @@ async function startBot() {
         await sock.sendMessage(jid, { text: `Decoded QR Code Text:\n${decodedText}`})
         return
     }
+    if (text==='/chucknorris' && msg.key.fromMe) {
+        const url = "https://api.chucknorris.io/jokes/random"
+        const jokeResponse = await fetch(url)
+        const jokeData = await jokeResponse.json()
+        const joke = jokeData?.value || "Chuck Norris can divide by zero."
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: joke })
+        return
+    }
+    if (text==='/buzz' && msg.key.fromMe) {
+        const url = "https://corporatebs-generator.sameerkumar.website/"
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const buzz = data?.phrase
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: buzz })
+        return
+    }
+    if (text==='/uselessfact' && msg.key.fromMe) {
+        const url = "https://uselessfacts.jsph.pl/random.json?language=en"
+        const factResponse = await fetch(url)
+        const factData = await factResponse.json()
+        const fact = factData?.text
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: fact })
+        return
+    }
+    if (text==='/techy' && msg.key.fromMe) {
+        const url = "https://techy-api.vercel.app/api/json"
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const techy = data?.message
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: techy })
+        return
+    }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
