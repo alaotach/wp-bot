@@ -82,14 +82,6 @@ async function startBot() {
       msg.message.conversation ||
       msg.message.extendedTextMessage?.text
 
-    const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
-    if (!isAllowed) {
-        return
-    }
-
-    if (!chatHistory[jid]) chatHistory[jid] = []
-    chatHistory[jid].push({text: text ?? undefined, timestamp: msg.messageTimestamp, role: 'user'})
-
     console.log(`${text}, ${isGroup}`)
     if (!text) return
 
@@ -100,6 +92,7 @@ async function startBot() {
             chatNames.splice(i, 1)
             console.log(`Stopped responding to ${chatName} (${gid})`)
         }
+        await sock.sendMessage(jid, { delete: msg.key })
         return
     }
     if (msg.key.remoteJid && msg.key.fromMe && text === '/start') {
@@ -108,8 +101,60 @@ async function startBot() {
             chatNames.push(gid)
             console.log(`Started responding to ${chatName} (${gid})`)
         }
+        await sock.sendMessage(jid, { delete: msg.key })
         return
     }
+
+    if (text.startsWith('/rizz') && msg.key.fromMe) {
+        const url = "https://o1swy96l80.execute-api.ap-south-1.amazonaws.com/api/random"
+        const rizzResponse = await fetch(url)
+        const rizzData = await rizzResponse.json()
+        // console.log(rizzData)
+        const bodyData = typeof rizzData.body === 'string' ? JSON.parse(rizzData.body) : rizzData
+        const rizz = bodyData?.pickupLine?.text || "Are you a magician? Because whenever I look at you, everyone else disappears."
+                
+        const Jid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+        
+        await sock.sendMessage(jid, { delete: msg.key })
+        
+        if (isGroup && Jid) {
+            await sock.sendMessage(jid, {
+                text: `@${Jid.split('@')[0]} ${rizz}`,
+                mentions: [Jid]
+            })
+        } else {
+            await sock.sendMessage(jid, { text: rizz })
+        }
+        return
+    }
+
+    if (text.startsWith('/insult') && msg.key.fromMe) {
+        const url = "https://evilinsult.com/generate_insult.php?lang=en&type=json"
+        const insultResponse = await fetch(url)
+        const insultData = await insultResponse.json()
+        const insult = insultData?.insult || "You're about as useful as a screen door on a submarine."
+        const Jid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+        
+        await sock.sendMessage(jid, { delete: msg.key })
+        
+        if (isGroup && Jid) {
+            await sock.sendMessage(jid, {
+                text: `@${Jid.split('@')[0]} ${insult}`,
+                mentions: [Jid]
+            })
+        } else {
+            await sock.sendMessage(jid, { text: insult })
+        }
+        return
+    }
+
+    const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
+    if (!isAllowed) {
+        return
+    }
+
+    if (!chatHistory[jid]) chatHistory[jid] = []
+    chatHistory[jid].push({text: text ?? undefined, timestamp: msg.messageTimestamp, role: 'user'})
 
     if (msg.key.remoteJid && isAllowed && !msg.key.fromMe) {
         console.log('generating response...')
