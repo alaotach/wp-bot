@@ -350,6 +350,62 @@ async function startBot() {
         await sock.sendMessage(jid, { text: techy })
         return
     }
+    if (text.startsWith('/t') && msg.key.fromMe) {
+        let rating = text.replace('/t', '').trim()
+        if (!rating) rating = 'pg13'
+        const url = `https://api.truthordarebot.xyz/v1/truth?rating=${encodeURIComponent(rating)}`  
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const truth = data?.question
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: truth })
+        return
+    }
+    if (text.startsWith('/d') && msg.key.fromMe) {
+        let rating = text.replace('/d', '').trim()
+        if (!rating) rating = 'pg13'
+        const url = `https://api.truthordarebot.xyz/v1/dare?rating=${encodeURIComponent(rating)}`
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const dare = data?.question
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: dare })
+        return
+    }
+    if (text.startsWith('/wyr') && msg.key.fromMe) {
+        let rating = text.replace('/wyr', '').trim()
+        if (!rating) rating = 'pg13'
+        const url = `https://api.truthordarebot.xyz/v1/wyr?rating=${encodeURIComponent(rating)}`
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const wyr = data?.question
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: wyr })
+        return
+    }
+    if (text.startsWith('/nhie') && msg.key.fromMe) {
+        let rating = text.replace('/nhie', '').trim()
+        if (!rating) rating = 'pg13'
+        const url = `https://api.truthordarebot.xyz/v1/nhie?rating=${encodeURIComponent(rating)}`
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const nhie = data?.question
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: nhie })
+        return
+    }
+    if (text.startsWith('/paranoia') && msg.key.fromMe) {
+        let rating = text.replace('/paranoia', '').trim()
+        if (!rating) rating = 'pg13'
+        const url = `https://api.truthordarebot.xyz/v1/paranoia?rating=${encodeURIComponent(rating)}`
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const paranoia = data?.question
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: paranoia })
+        return
+    }
+    
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
