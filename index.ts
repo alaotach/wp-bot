@@ -421,6 +421,21 @@ async function startBot() {
         await sock.sendMessage(jid, { text: reply })
         return
     }
+    if (text.startsWith('/poll') && msg.key.fromMe) {
+        let pollText = text.replace('/poll', '').trim()
+        if (!pollText) return
+        const options = pollText.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0)
+        if (options.length < 2) return
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, {
+            poll: {
+                name: 'Choose one!!',
+                values: options,
+                selectableCount: 1
+            }
+        })
+        return
+    }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
