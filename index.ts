@@ -405,7 +405,22 @@ async function startBot() {
         await sock.sendMessage(jid, { text: paranoia })
         return
     }
-    
+    if (text.startsWith('/eli5') && msg.key.fromMe) {
+        let topic = text.replace('/eli5', '').trim()
+        if (!topic) return
+        const resp = await client.chat.completions.create({
+            model: "qwen/qwen-32b",
+            messages: [
+                {role: "system", content: "explain like I'm 5"},
+                {role: "user", content: `explain ${topic} in simple terms like I'm 5 years old.`}
+            ],
+            stream: false        })
+        const content = resp.choices[0].message.content
+        const reply = typeof content === 'string' ? content : Array.isArray(content) ? (content as any[]).find(item => 'text' in item)?.text || 'No response': 'No response'
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: reply })
+        return
+    }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
