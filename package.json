@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "baileys": "^7.0.0-rc.9",
+    "pino": "^10.1.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/qrcode-terminal": "^0.12.2"
+  }
+}
