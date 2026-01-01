@@ -18,6 +18,22 @@ const client = new OpenAI({
 });
 
 const CHAT_NAMES_FILE = 'chat-names.json';
+const CONFIG_FILE = 'config.json';
+
+function loadConfig() {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading config:', error);
+    }
+    return null;
+}
+
+const config = loadConfig();
+
 function loadChatNames(): string[] {
     try {
         if (fs.existsSync(CHAT_NAMES_FILE)) {
@@ -27,7 +43,7 @@ function loadChatNames(): string[] {
     } catch (error) {
         console.error('Error loading chat names:', error);
     }
-    return ["Aryan", "maal+kinn", "Ron", "120363403086364841@g.us", "sticker", "ToothBrush", "keeda", "Fire", "Anand", "Jai Shri", "Dev Bhardwaj", "Priyanshu", "saniya", "ShUbHaM", "chudail"];
+    return config?.chatNames || [];
 }
 
 function saveChatNames(chatNames: string[]) {
@@ -607,6 +623,46 @@ async function startBot() {
             }
         });
         await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+    if (text.startsWith('/help') && msg.key.fromMe) {
+        const helpText = `Available Commands:
+/start - Start responding in current chat
+/stop - Stop responding in current chat
+/rizz @user - rizz user up
+/insult @user - insult the bastard
+/cat - random meow image
+/dog - random dog image
+/catfact - random cat fact
+/joke - random joke
+/duck - random duck image
+/fox - random fox image
+/neko - random neko image
+/colormind - Generate a random color palette
+/qrcode <text> - Generate a QR code for the given text
+/scanqr - Scan a QR code from the replied image msg
+/chucknorris - random Chuck Norris joke
+/buzz - random corporate buzzphrase
+/uselessfact - random useless fact
+/techy - random techy phrase
+/t [rating] - truth question (optional rating: pg13, r, etc.)
+/d [rating] - dare question (optional rating: pg13, r, etc.)
+/wyr [rating] - would you rather question (optional rating: pg13, r, etc.)
+/nhie [rating] - never have I ever question (optional rating: pg13, r, etc.)
+/paranoia [rating] - paranoia question (optional rating: pg13, r, etc.)
+/eli5 <topic> - Explain a topic like I'm 5 yo
+/schedule <YYYY-MM-DDTHH:MM:SS> <message> - Schedule a message to be sent at a specific time
+/poll opt1, opt2, ... - Create a poll with the given options
+/save - Save the replied msg to pinned msgs
+/saves - Show all saved pinned msgs
+/clearsaves - Clear all saved pinned msgs
+/git <args> - Execute a git command
+/gh repo <args> - Execute a gh repo command
+/gh issue <args> - Execute a gh issue command
+/cmd <command> - Execute a shell command
+/help - Show this message`
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: helpText })
         return
     }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
