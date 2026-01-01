@@ -1,10 +1,13 @@
 import 'dotenv/config';
-import makeWASocket, {DisconnectReason,useMultiFileAuthState} from 'baileys';
+import makeWASocket, {DisconnectReason,useMultiFileAuthState, downloadMediaMessage} from 'baileys';
 import Pino from 'pino';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 import OpenAI from 'openai';
 import fs from 'fs';
+import jsQR from 'jsqr';
+import { PNG } from 'pngjs';
 
 const client = new OpenAI({
     baseURL: "https://ai.hackclub.com/proxy/v1",
@@ -254,13 +257,61 @@ async function startBot() {
         })
         const colorData = await colorResponse.json()
         const colors: number[][] = colorData?.result
-        let colorText = "Here is a color palette for you:\n"
-        colors.forEach(color => {
+        
+        if (!colors || colors.length === 0) {
+            return
+        }
+        const { createCanvas } = await import('canvas')
+        const colorWidth = 100
+        const canvasWidth = colors.length * colorWidth
+        const canvasHeight = 100
+        const canvas = createCanvas(canvasWidth, canvasHeight)
+        const ctx = canvas.getContext('2d')
+        
+        let colorText = "Color Palette:\n"
+        
+        colors.forEach((color, index) => {
             const hex = '#' + color.map(c => c.toString(16).padStart(2, '0')).join('')
+            const rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`
+            ctx.fillStyle = rgb
+            ctx.fillRect(index * colorWidth, 0, colorWidth, canvasHeight)
             colorText += `${hex}\n`
         })
+        const buffer = canvas.toBuffer('image/png')
         await sock.sendMessage(jid, { delete: msg.key })
-        await sock.sendMessage(jid, { text: colorText })
+        await sock.sendMessage(jid, { 
+            image: buffer,
+            caption: colorText
+        })
+        return
+    }
+
+    if (text.startsWith('/qrcode') && msg.key.fromMe) {
+        const qrText = text.replace('/qrcode', '').trim()
+        if (!qrText) return
+        const qrCodeDataUrl = await QRCode.toDataURL(qrText)
+        const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, "")
+        const imgBuffer = Buffer.from(base64Data, 'base64')
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: imgBuffer})
+        return
+    }
+    if (text===`/scanqr` && msg.key.fromMe) {
+        if (!msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) return
+        const qMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage
+        const imgMsg = qMsg.imageMessage
+        if (!imgMsg) return
+        const buffer = await downloadMediaMessage(
+            { message: qMsg, key: msg.message.extendedTextMessage.contextInfo.stanzaId || msg.key.id || '' } as any,
+            'buffer',
+            {},
+            { logger: Pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+        )
+        const png = PNG.sync.read(buffer as Buffer)
+        const code = jsQR(Uint8ClampedArray.from(png.data), png.width, png.height)
+        const decodedText = code?.data || 'Not a QR code'
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: `Decoded QR Code Text:\n${decodedText}`})
         return
     }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
