@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
+const { exec } = await import('child_process')
 
 const client = new OpenAI({
     baseURL: "https://ai.hackclub.com/proxy/v1",
@@ -483,6 +484,71 @@ async function startBot() {
         setTimeout(async () => {
             await sock.sendMessage(jid, { text: messageToSend })
         }, delay)
+        return
+    }
+    if (text.startsWith("gh repo") && msg.key.fromMe) {
+        const cmd = text.replace("gh repo", "").trim()
+          
+        exec(`gh repo ${cmd}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing command: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`Command stderr: ${stderr}`);
+                return;
+            }
+            sock.sendMessage(jid, { text: `Command Output:\n${stdout}` })
+        });
+        await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+    if (text.startsWith("gh issue") && msg.key.fromMe) {
+        const cmd = text.replace("gh issue", "").trim()
+        exec(`gh issue ${cmd}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing command: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`Command stderr: ${stderr}`);
+                return;
+            }
+            sock.sendMessage(jid, { text: `Command Output:\n${stdout}` })
+        });
+        await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+    if (text.startsWith("/git") && msg.key.fromMe) {
+        const cmd = text.replace("/git", "").trim()
+        exec(`git ${cmd}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing command: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`Command stderr: ${stderr}`);
+                return;
+            }
+            sock.sendMessage(jid, { text: `Command Output:\n${stdout}` })
+        });
+        await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+    if (text.startsWith("/cmd") && msg.key.fromMe) {
+        const cmd = text.replace("/cmd", "").trim()
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error executing command: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`Command stderr: ${stderr}`);
+                return;
+            }
+            sock.sendMessage(jid, { text: `Command Output:\n${stdout}` })
+        });
+        await sock.sendMessage(jid, { delete: msg.key })
         return
     }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
