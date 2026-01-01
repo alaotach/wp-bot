@@ -170,7 +170,7 @@ async function startBot() {
         return
     }
 
-    if (text.startsWith('/cat') && msg.key.fromMe) {
+    if (text==='/cat' && msg.key.fromMe) {
         const url = "https://cataas.com/cat"
         const catResponse = await fetch(url)
         const catBuffer = await catResponse.arrayBuffer()
@@ -178,7 +178,7 @@ async function startBot() {
         await sock.sendMessage(jid, { image: Buffer.from(catBuffer), caption: "Here's a cat for you! 🐱" })
         return
     }
-    if (text.startsWith('/dog') && msg.key.fromMe) {
+    if (text==='/dog' && msg.key.fromMe) {
         const url = "https://dog.ceo/api/breeds/image/random"
         const dogResponse = await fetch(url)
         const dogData = await dogResponse.json()
@@ -187,6 +187,80 @@ async function startBot() {
         const imageBuffer = await imageResponse.arrayBuffer()
         await sock.sendMessage(jid, { delete: msg.key })
         await sock.sendMessage(jid, { image: Buffer.from(imageBuffer), caption: "Here's a dog for you! 🐶" })
+        return
+    }
+    if (text==='/catfact' && msg.key.fromMe) {
+        const url = "https://catfact.ninja/fact"
+        const factResponse = await fetch(url)
+        const factData = await factResponse.json()
+        const fact = factData?.fact
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: fact })
+        return
+    }
+    if (text==='/joke' && msg.key.fromMe) {
+        const url = "https://v2.jokeapi.dev/joke/Any?type=single,twopart"
+        const jokeResponse = await fetch(url)
+        const jokeData = await jokeResponse.json()
+        const joke = jokeData?.joke || `${jokeData?.setup}\n\n${jokeData?.delivery}`
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: joke })
+        return
+    }
+    if (text==='/duck' && msg.key.fromMe) {
+        const url = "https://random-d.uk/api/v2/random"
+        const duckResponse = await fetch(url)
+        const duckData = await duckResponse.json()
+        const duckImageUrl = duckData?.url
+        const imageResponse = await fetch(duckImageUrl)
+        const imageBuffer = await imageResponse.arrayBuffer()
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: Buffer.from(imageBuffer), caption: "Here's a duck for you! 🦆" })
+        return
+    }
+    if (text==='/fox' && msg.key.fromMe) {
+        const url = "https://randomfox.ca/floof/"
+        const foxResponse = await fetch(url)
+        const foxData = await foxResponse.json()
+        const foxImageUrl = foxData?.image
+        const imageResponse = await fetch(foxImageUrl)
+        const imageBuffer = await imageResponse.arrayBuffer()
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: Buffer.from(imageBuffer), caption: "Here's a fox for you! 🦊" })
+        return
+    }
+    if (text==='/neko' && msg.key.fromMe) {
+        const url = "https://nekos.life/api/v2/img/neko"
+        const nekoResponse = await fetch(url)
+        const nekoData = await nekoResponse.json()
+        const nekoImageUrl = nekoData?.url
+        const imageResponse = await fetch(nekoImageUrl)
+        const imageBuffer = await imageResponse.arrayBuffer()
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: Buffer.from(imageBuffer), caption: "Here's a neko for you! 🐱" })
+        return
+    }
+    if (text==='/colormind' && msg.key.fromMe) {
+        const url = "http://colormind.io/api/"
+        const payload = {
+            model: "default"
+        }
+        const colorResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        const colorData = await colorResponse.json()
+        const colors: number[][] = colorData?.result
+        let colorText = "Here is a color palette for you:\n"
+        colors.forEach(color => {
+            const hex = '#' + color.map(c => c.toString(16).padStart(2, '0')).join('')
+            colorText += `${hex}\n`
+        })
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: colorText })
         return
     }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
