@@ -436,6 +436,31 @@ async function startBot() {
         })
         return
     }
+    if (text===('/save') && msg.key.fromMe) {
+        if (!msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) return
+        const qMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage
+        const qText = qMsg.conversation || qMsg.extendedTextMessage?.text
+        let time = Date.now()
+        if (!qText) return
+        if (!fs.existsSync('pinned.txt')) {
+            fs.writeFileSync('pinned.txt', '')
+        }
+        fs.appendFileSync('pinned.txt', `[${new Date(time).toLocaleString()}] ${qText}\n`)
+        await sock.sendMessage(jid, { delete: msg.key })
+        return
+    }
+    if (text===('/saves') && msg.key.fromMe) {
+        if (!fs.existsSync('pinned.txt')) {
+            await sock.sendMessage(jid, { delete: msg.key })
+            await sock.sendMessage(jid, { text: 'No saved messages.' })
+            return
+        }
+        const data = fs.readFileSync('pinned.txt', 'utf-8')
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { text: `Saved Messages:\n\n${data}` })
+        return
+    }
+
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
