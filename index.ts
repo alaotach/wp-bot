@@ -4,13 +4,35 @@ import Pino from 'pino';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import OpenAI from 'openai';
+import fs from 'fs';
 
 const client = new OpenAI({
     baseURL: "https://ai.hackclub.com/proxy/v1",
     apiKey: process.env.ai_api_key,
 });
 
-const chatNames = ["Aryan", "maal+kinn", "Ron", "120363403086364841@g.us", "sticker", "ToothBrush", "keeda", "Fire", "Anand", "Jai Shri", "Dev Bhardwaj", "Priyanshu", "saniya", "ShUbHaM", "chudail"]
+const CHAT_NAMES_FILE = 'chat-names.json';
+function loadChatNames(): string[] {
+    try {
+        if (fs.existsSync(CHAT_NAMES_FILE)) {
+            const data = fs.readFileSync(CHAT_NAMES_FILE, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading chat names:', error);
+    }
+    return ["Aryan", "maal+kinn", "Ron", "120363403086364841@g.us", "sticker", "ToothBrush", "keeda", "Fire", "Anand", "Jai Shri", "Dev Bhardwaj", "Priyanshu", "saniya", "ShUbHaM", "chudail"];
+}
+
+function saveChatNames(chatNames: string[]) {
+    try {
+        fs.writeFileSync(CHAT_NAMES_FILE, JSON.stringify(chatNames, null, 2));
+    } catch (error) {
+        console.error('Error saving chat names:', error);
+    }
+}
+
+const chatNames = loadChatNames();
 
 const chatHistory: Record<string, Array<{text: string | undefined, timestamp: number | Long | null | undefined, role: 'user' | 'assistant'}>> = {}
 
@@ -90,6 +112,7 @@ async function startBot() {
         const i = chatNames.indexOf(gid)
         if (i > -1) {
             chatNames.splice(i, 1)
+            saveChatNames(chatNames)
             console.log(`Stopped responding to ${chatName} (${gid})`)
         }
         await sock.sendMessage(jid, { delete: msg.key })
@@ -99,6 +122,7 @@ async function startBot() {
         const gid = isGroup ? jid : chatName
         if (!chatNames.includes(gid)) {
             chatNames.push(gid)
+            saveChatNames(chatNames)
             console.log(`Started responding to ${chatName} (${gid})`)
         }
         await sock.sendMessage(jid, { delete: msg.key })
@@ -134,9 +158,7 @@ async function startBot() {
         const insultData = await insultResponse.json()
         const insult = insultData?.insult || "You're about as useful as a screen door on a submarine."
         const Jid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-        
         await sock.sendMessage(jid, { delete: msg.key })
-        
         if (isGroup && Jid) {
             await sock.sendMessage(jid, {
                 text: `@${Jid.split('@')[0]} ${insult}`,
@@ -148,6 +170,25 @@ async function startBot() {
         return
     }
 
+    if (text.startsWith('/cat') && msg.key.fromMe) {
+        const url = "https://cataas.com/cat"
+        const catResponse = await fetch(url)
+        const catBuffer = await catResponse.arrayBuffer()
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: Buffer.from(catBuffer), caption: "Here's a cat for you! 🐱" })
+        return
+    }
+    if (text.startsWith('/dog') && msg.key.fromMe) {
+        const url = "https://dog.ceo/api/breeds/image/random"
+        const dogResponse = await fetch(url)
+        const dogData = await dogResponse.json()
+        const dogImageUrl = dogData?.message
+        const imageResponse = await fetch(dogImageUrl)
+        const imageBuffer = await imageResponse.arrayBuffer()
+        await sock.sendMessage(jid, { delete: msg.key })
+        await sock.sendMessage(jid, { image: Buffer.from(imageBuffer), caption: "Here's a dog for you! 🐶" })
+        return
+    }
     const isAllowed = isGroup ? chatNames.includes(jid) : chatNames.some(name => chatName.toLowerCase().includes(name.toLowerCase()))
     if (!isAllowed) {
         return
